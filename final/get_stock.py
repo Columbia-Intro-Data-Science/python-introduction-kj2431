@@ -9,7 +9,7 @@ from pandas import datetime
 from pandas_datareader import data
 
 print('Enter a NYSE ticker symbol:')
-stock = input()
+stock = input() #asks for input
 
 start = datetime(2016,3,19)
 end = datetime(2018,3,26)
