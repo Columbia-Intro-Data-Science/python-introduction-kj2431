@@ -13,6 +13,7 @@ from pytz import timezone
 
 import tensorflow as tf
 import keras
+from statsmodels.tsa.arima_model import ARIMA
 
 from pandas import datetime
 from pandas_datareader import data
@@ -152,6 +153,18 @@ def load_data_5(stock,y,window):
     return [X_train, y_train, X_valid, y_valid, X_test, y_test]
 
 
+def difference(dataset, interval=1):
+    diff = list()
+    for i in range(interval, len(dataset)):
+        value = dataset[i] - dataset[i - interval]
+        diff.append(value)
+    return np.array(diff)
+
+# invert differenced value
+def inverse_difference(history, yhat, interval=1):
+    return yhat + history[-interval]
+
+
 
 @app.route('/')
 def index():
@@ -178,12 +191,50 @@ def index_post():
         y_predict_scaled_5 = model_predict(X_train5, y_train5, X_test5,model5,y_max,y_min)
         print(y_predict_scaled_5)
         y_1 = y[-1]*(y_max-y_min)+y_min
+        if y_predict_scaled_1 > y_1:
+            rec1 = 'Buy'
+        else:
+            rec1 = 'Sell'
+
+        if y_predict_scaled_5 > y_1:
+            rec5 = 'Buy'
+        else:
+            rec5 = 'Sell'
+
+        #ARIMA
+        series = y
+        # seasonal difference
+        X3 = series.values
+        days_in_year = 52
+        differenced = difference(X3, days_in_year)
+        # fit model
+        model = ARIMA(differenced, order=(3,1,2))
+        model_fit = model.fit(disp=0)
+        future_steps = 10
+        # multistep future forecast
+        forecast = model_fit.forecast(steps=future_steps)[0]
+        # invert the differenced forecast to something usable
+        y_predict_10 = [x for x in X3]
+        day = 1
+        for yhat in forecast:
+            inverted = inverse_difference(y_predict_10, yhat, days_in_year)
+            y_predict_10.append(inverted)
+            day += 1
+        y_predict_10 = np.array(y_predict_10)
+        y_predict_scaled_10 = y_predict_10[-1]*(y_max-y_min)+y_min
+        if y_predict_scaled_10 > y_1:
+            rec10 = 'Buy'
+        else:
+            rec10 = 'Sell'
+
         today_date = datetime.now(timezone('US/Eastern')).strftime("%Y-%m-%d")
-        return render_template("price_predict.html", stock=stock, y_plus_1=round(np.float(y_predict_scaled_1),2), y_plus_5=round(np.float(y_predict_scaled_5),2), last_y=round(y_1,2),today_date=today_date)
+        return render_template("price_predict.html", stock=stock, y_plus_1=round(np.float(y_predict_scaled_1),2),
+                               y_plus_5=round(np.float(y_predict_scaled_5),2),
+                               last_y=round(y_1,2),today_date=today_date, rec_1=rec1,
+                               rec_5=rec5, predict_10=y_predict_scaled_10, rec_10=rec10)
     else:
         return render_template("main_page.html")
 
 
 
-if __name__ == "__main__":
-    app.run()
+
