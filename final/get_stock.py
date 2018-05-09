@@ -17,3 +17,4 @@ end = datetime(2018,3,26)
 df = data.DataReader(stock, 'iex', start, end)
 print(df.head())
 print(df.tail())
+#example code to acquire stock data using IEX api
