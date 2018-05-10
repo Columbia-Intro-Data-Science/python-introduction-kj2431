@@ -231,7 +231,7 @@ def index_post():
         return render_template("price_predict.html", stock=stock, y_plus_1=round(np.float(y_predict_scaled_1),2),
                                y_plus_5=round(np.float(y_predict_scaled_5),2),
                                last_y=round(y_1,2),today_date=today_date, rec_1=rec1,
-                               rec_5=rec5, predict_10=y_predict_scaled_10, rec_10=rec10)
+                               rec_5=rec5, predict_10=round(np.float(y_predict_scaled_10),2), rec_10=rec10)
     else:
         return render_template("main_page.html")
 
